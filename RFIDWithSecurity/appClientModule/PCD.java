@@ -27,7 +27,7 @@ public class PCD extends Thread {
 	
 	public void run() {
 		try {
-			System.out.println("PCD: POWER ON FIELD");
+			System.out.println("PCD:\t POWER ON FIELD");
 			System.out.println("");
 			
 			for (PICC picc : m_piccDevices) {
@@ -38,7 +38,9 @@ public class PCD extends Thread {
 				System.out.println("===========PCD: NEW LOOP===========");
 				
 				sleep(2000);
-				this.sendREQ();
+				if (!this.sendREQ()) {
+					return;
+				}
 				
 				sleep(1000);
 				System.out.println("---------------------");
@@ -46,7 +48,9 @@ public class PCD extends Thread {
 					sleep(1000);
 					System.out.println("------ SLOT " + i + " -------");
 					this.setCurrentSlot(i);
-					this.sendSlotMarker(i);
+					if (!this.sendSlotMarker(i)) {
+						return;
+					}
 					this.processPiccInSlot();
 				}
 				System.out.println("---------------------");
@@ -54,7 +58,7 @@ public class PCD extends Thread {
 				System.out.println("");
 			}
 			
-			System.out.println("PCD: POWER OFF FIELD");
+			System.out.println("PCD:\t POWER OFF FIELD");
 			
 		} catch (InterruptedException e) {
 			// TODO Auto-generated catch block
@@ -71,47 +75,56 @@ public class PCD extends Thread {
 		return true;
 	}
 	
-	private void sendREQ() {
-		System.out.println("PCD: SEND REQUEST COMMAND");
+	private boolean sendREQ() {
+		System.out.println("PCD:\t SEND REQUEST COMMAND");
 		for (PICC picc : m_piccDevices) {
 			if (!picc.getState().equals(PICC.State.READY)) {
 				if (this.m_sreader.validate(picc.getSReceiver())) {
 					picc.receiveREQ(N);
+				} else {
+					System.out.println("PCD:\t ALERT!!! PICC CANNOT BE FOUND. ");
+					this.interrupt();
+					return false;
 				}
 			}
 		}
+		return true;
 	}
 	
 	private void setCurrentSlot(int t) {
 		this.m_jl_current.setText(Integer.toString(t));
 	}
 	
-	private void sendSlotMarker(int n) {
-		System.out.println("PCD: SEND SLOT-MARKER COMMAND");
+	private boolean sendSlotMarker(int n) {
+		System.out.println("PCD:\t SEND SLOT-MARKER COMMAND");
 		for (PICC picc : m_piccDevices) {
 			if (!picc.getState().equals(PICC.State.READY)) {
 				if (this.m_sreader.validate(picc.getSReceiver())) {
 					if (picc.receiveSlotMarker(n)) {
 						this.m_piccInSlot.add(picc);
 					}
+				} else {
+					this.interrupt();
+					return false;
 				}
 			}
 		}
+		return true;
 	}
 	
 	private void processPiccInSlot() throws InterruptedException {
 		if (m_piccInSlot.isEmpty()) {
 			// DO NOTHING
-			System.out.println("PCD: NO PICC IN SLOT");
+			System.out.println("PCD:\t NO PICC IN SLOT");
 		} else if (m_piccInSlot.size() == 1) {
 			// NO COLLISION
-			System.out.println("PCD: PICC " + m_piccInSlot.get(0).getName() + " IS ATS AVAILABLE");
+			System.out.println("PCD:\t PICC " + m_piccInSlot.get(0).getName() + " IS ATS AVAILABLE");
 			m_piccInSlot.get(0).setStatus(PICC.State.ACTIVE);
 			sleep(500);
 			m_piccInSlot.get(0).setStatus(PICC.State.READY);
 		} else {
 			// COLLISION OCCURED
-			System.out.print("PCD: PICC ");
+			System.out.print("PCD:\t PICC ");
 			for (PICC picc : m_piccInSlot) {
 				System.out.print(picc.getName() + ", ");
 				picc.setStatus(PICC.State.COLLISION);
@@ -135,23 +148,36 @@ class SecurityReader {
 	
 	public boolean validate(SecurityReceiver sr) {
 		r1 = Utils.nonce();
+		System.out.println("PCD:\t GENERATE R1 = " + Long.toBinaryString(r1));
 		sr.encrypt(r1);
 		return this.decrypt(sr);
 	}
 
 	private boolean decrypt(SecurityReceiver sr) {
+		System.out.println("-----PCD DECRYPTING-----");
 		Long r2 = sr.getR2();
 		for (Long k : table_id_key.keySet()) {
 			Long id = k;
 			Long key = table_id_key.get(k);
+			System.out.println("PCD:\t TRY PICC ID " + Long.toBinaryString(id));
 			Long left = getLeftHalf(id, key, r2);
+			System.out.print("PCD:\t left half of ID2 ^ G = " + Long.toBinaryString(left));
 			if (left.equals(sr.getLeftID2())) {
+				System.out.println(". MATCH");
 				Long right = getRightHalf(id, key, r2);
+				System.out.print("PCD:\t right half of ID2 ^ G = " + Long.toBinaryString(right));
 				if (sr.matchRightHalf(right)) {
+					System.out.println(". MATCH");
+					System.out.println("------------------------");
 					return true;
+				} else  {
+					System.out.println(". NOT MATCH");
 				}
+			} else {
+				System.out.println(". NOT MATCH");
 			}
 		}
+		System.out.println("------------------------");
 		return false;
 	}
 

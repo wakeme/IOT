@@ -57,6 +57,7 @@ public class Simulator extends JDialog implements ActionListener {
 				public void run() {
 					resetUI();
 					
+					// generate random ids and keys
 					Long a_id 	= Utils.random64();
 					Long a_key	= Utils.random64();
 					Long b_id 	= Utils.random64();

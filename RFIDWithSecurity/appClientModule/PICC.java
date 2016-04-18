@@ -36,7 +36,7 @@ public class PICC {
 			this.m_jl_state.setBackground(Color.YELLOW);
 			break;
 		case ACTIVE:
-			System.out.println("PICC " + this.getName() + ": IN ACTIVE STATE");
+			System.out.println("PICC " + this.getName() + ":\t IN ACTIVE STATE");
 			this.m_jl_state.setText("ACTIVATE");
 			this.m_jl_state.setBackground(Color.GREEN);
 			break;
@@ -45,7 +45,7 @@ public class PICC {
 			this.m_jl_state.setBackground(Color.RED);
 			break;
 		case READY:
-			System.out.println("PICC " + this.getName() + ": READY FOR ACTIVE");
+			System.out.println("PICC " + this.getName() + ":\t READY FOR ACTIVE");
 			this.m_jl_state.setText("READY");
 			this.m_jl_state.setBackground(Color.BLUE);
 			this.resetR();
@@ -68,16 +68,16 @@ public class PICC {
 			int r = this.generateR(n);
 			this.m_R = r;
 			this.m_jl_R.setText(Integer.toString(r));
-			System.out.println("PICC " + this.m_name + ": GENERATE RANDOM NUMBER " + r);
+			System.out.println("PICC " + this.m_name + ":\t GENERATE RANDOM NUMBER " + r);
 		} else if (n == 1) {
-			System.out.println("PICC " + this.m_name + ": SEND ANSWER TO REQUEST");
+			System.out.println("PICC " + this.m_name + ":\t SEND ANSWER TO REQUEST");
 		}
 		return true;
 	}
 	
 	public boolean receiveSlotMarker(int n) {
 		if (n == this.m_R) {
-			System.out.println("PICC " + this.m_name + ": MATCHED SLOT " + n);
+			System.out.println("PICC " + this.m_name + ":\t MATCHED SLOT " + n);
 			return true;
 		}
 		return false;
@@ -115,11 +115,19 @@ class SecurityReceiver {
 	}
 	
 	public void encrypt(Long r1) {
+
+		System.out.println("-----PICC ENCRYPTING-----");
+		System.out.println("PICC:\t ID = " + Long.toBinaryString(id));
 		this.r2 = Utils.nonce();
+		System.out.println("PICC:\t GENERATE R2 = " + Long.toBinaryString(r2));
 		int g = Long.toBinaryString(r1 ^ r2 ^ key).hashCode();
-		id2 = Long.rotateLeft(id, g % 64);//Utils.rotateLeft(id, g % 64);
+		System.out.println("PICC:\t G = hash(R1 ^ R2 ^ K) = " + Integer.toBinaryString(g));
+		id2 = Long.rotateLeft(id, g % 64);
+		System.out.println("PICC:\t ID2(rotate by " + g % 64 +") = " + Long.toBinaryString(id2));
 		left_half = Utils.getLeft(id2 ^ g);
+		System.out.println("PICC:\t left half of ID2 ^ G = " + Long.toBinaryString(left_half));
 		right_half = Utils.getRight(id2 ^ g);
+		System.out.println("-------------------------");
 	}
 	
 	public Long getR2() {
